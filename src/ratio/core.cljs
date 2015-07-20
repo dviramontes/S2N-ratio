@@ -4,6 +4,16 @@
     [quil.middleware :as m]
     [reagent.core :as reagent :refer [atom]]))
 
+(def WIDTH (.-innerWidth js/window))
+(def HEIGHT (.-innerHeight js/window))
+
+(def two-pi (* 2 (.-PI js/Math)))
+(def x-spacing 16)
+(def period 500)
+(def amp 150)
+(def dx (* x-spacing (/ two-pi period)))
+(def y-values (range 0 (/ WIDTH x-spacing)))
+
 (enable-console-print!)
 
 ;; define your app data so that it doesn't get over-written on reload
@@ -14,8 +24,6 @@
 
 (reagent/render-component [hello-world]
                           (. js/document (getElementById "app")))
-
-
 (defn on-js-reload []
   (print "reload....")
   ;; optionally touch your app-state to force rerendering depending on
@@ -31,31 +39,39 @@
   ; setup function returns initial state. It contains
   ; circle color and position.
   {:color 0
-   :angle 0})
+   :angle 0
+   :theta 0.0})
 
 (defn update-state [state]
   ; Update sketch state by changing circle color and position.
   {:color (mod (+ (:color state) 0.7) 255)
-   :angle (- (:angle state) 0.1)})
+   :angle (+ (:angle state) 0.1)
+   :theta (+ (:theta state) 0.02)})
 
 (defn draw-state [state]
   ; Clear the sketch by filling it with light-grey color.
-  (q/background 240)
+  (q/background 0)
+  (q/no-stroke)
   ; Set circle color.
   (q/fill (:color state) 255 255)
   ; Calculate x and y coordinates of the circle.
   (let [angle (:angle state)
-        x (* 150 (q/cos angle))
-        y (* 150 (q/sin angle))]
-    ; Move origin point to the center of the sketch.
+        x (* 100 (q/sin angle))
+        y (* 100 (q/cos angle))
+        d (/ WIDTH 20)
+        values (map #(* (q/sin (:theta state)) amp) y-values)]
+    ; Move origin point to the center of the sketch
     (q/with-translation [(/ (q/width) 2)
                          (/ (q/height) 2)]
                         ; Draw the circle.
-                        (q/ellipse x y 100 100))))
+                        (q/ellipse x y d d))
+    (map (fn [x]
+           (q/ellipse-mode :center)
+           (q/ellipse (* x x-spacing) (+ (/ WIDTH 2) x) 16 16)) values)))
 
 (q/defsketch hello-quil
              :host "canvas"
-             :size [(.-innerWidth js/window) (.-innerHeigt js/window)]
+             :size [WIDTH HEIGHT]
              ; setup function called only once, during sketch initialization.
              :setup setup
              ; update-state is called on each iteration before draw-state.
